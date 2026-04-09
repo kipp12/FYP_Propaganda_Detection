@@ -1,0 +1,24 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Claude Code
+.claude/
+
+# Results / model outputs
+results/
+*.pt
+*.bin
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
