@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import (
     AutoTokenizer,
@@ -9,6 +10,24 @@ from transformers import (
 
 from src.data.bio import char_offsets_to_token_bio, token_bio_to_char_offsets
 from src.evaluation.si_eval import evaluate_si
+
+
+def _compute_class_weights(dataset) -> torch.Tensor:
+    """
+    Compute per-class weights inversely proportional to token frequency.
+
+    Tokens labelled -100 (subword continuations and padding) are ignored.
+    Returns a weight tensor [w_O, w_B, w_I] suitable for
+    torch.nn.CrossEntropyLoss(weight=...).
+    """
+    counts = [0, 0, 0]  # O=0, B=1, I=2
+    for example in dataset:
+        for label in example['labels']:
+            if label != -100:
+                counts[label] += 1
+    total = sum(counts)
+    weights = [total / (3 * max(c, 1)) for c in counts]
+    return torch.tensor(weights, dtype=torch.float)
 
 
 class _SIDataset(Dataset):
@@ -113,6 +132,11 @@ class FinetunedRoBERTaSI:
             train_dataset, batch_size=self.batch_size, shuffle=True, collate_fn=collator
         )
 
+        # Weighted loss to address severe O vs B/I class imbalance
+        class_weights = _compute_class_weights(train_dataset).to(self.device)
+        loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=-100)
+        print(f'Class weights — O: {class_weights[0]:.3f}, B: {class_weights[1]:.3f}, I: {class_weights[2]:.3f}')
+
         total_steps   = len(train_loader) * self.epochs
         warmup_steps  = int(total_steps * self.warmup_ratio)
 
@@ -133,8 +157,11 @@ class FinetunedRoBERTaSI:
 
             for batch in train_loader:
                 batch = {k: v.to(self.device) for k, v in batch.items()}
+                labels = batch.pop('labels')
                 outputs = self.model(**batch)
-                loss = outputs.loss
+                # Use weighted loss instead of the model's built-in unweighted loss
+                logits = outputs.logits  # (batch, seq_len, num_labels)
+                loss = loss_fn(logits.view(-1, 3), labels.view(-1))
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
