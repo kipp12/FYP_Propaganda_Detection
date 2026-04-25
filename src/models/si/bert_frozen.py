@@ -7,6 +7,25 @@ from src.data.bio import char_offsets_to_token_bio, token_bio_to_char_offsets
 from src.evaluation.si_eval import evaluate_si
 
 
+def _compute_class_weights(dataset) -> torch.Tensor:
+    """
+    Compute per-class weights inversely proportional to token frequency.
+
+    Tokens labelled -100 (subword continuations and padding) are ignored.
+    Returns a weight tensor [w_O, w_B, w_I] suitable for
+    torch.nn.CrossEntropyLoss(weight=...).
+    """
+    counts = [0, 0, 0]  # O=0, B=1, I=2
+    for example in dataset:
+        for label in example['labels']:
+            if label != -100:
+                counts[label] += 1
+    total = sum(counts)
+    # balanced weighting: total / (num_classes * class_count)
+    weights = [total / (3 * max(c, 1)) for c in counts]
+    return torch.tensor(weights, dtype=torch.float)
+
+
 class _SIDataset(Dataset):
     """
     Tokenises each article and maps gold SI spans to token-level BIO labels.
@@ -53,6 +72,11 @@ class FrozenBERTSI:
     frozen encoder. The resulting contextual embeddings are fed into a
     linear head that predicts a BIO tag per token.
 
+    Class-weighted cross-entropy loss is used to counter the severe
+    token-level imbalance between O (non-propaganda) and B/I tokens.
+    Weights are computed from the training set and applied via a custom
+    loss function rather than the model's built-in loss.
+
     Predicted BIO sequences are converted back to character offsets for
     evaluation against the gold standard.
     """
@@ -65,7 +89,7 @@ class FrozenBERTSI:
         batch_size: int = 8,
         lr: float = 1e-3,
         epochs: int = 20,
-        patience: int = 3,
+        patience: int = 5,
     ):
         self.max_length = max_length
         self.batch_size = batch_size
@@ -104,6 +128,11 @@ class FrozenBERTSI:
             train_dataset, batch_size=self.batch_size, shuffle=True, collate_fn=collator
         )
 
+        # Weighted loss to address severe O vs B/I class imbalance
+        class_weights = _compute_class_weights(train_dataset).to(self.device)
+        loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=-100)
+        print(f'Class weights — O: {class_weights[0]:.3f}, B: {class_weights[1]:.3f}, I: {class_weights[2]:.3f}')
+
         optimizer = torch.optim.AdamW(
             [p for p in self.model.parameters() if p.requires_grad], lr=self.lr
         )
@@ -118,8 +147,11 @@ class FrozenBERTSI:
 
             for batch in train_loader:
                 batch = {k: v.to(self.device) for k, v in batch.items()}
+                labels = batch.pop('labels')
                 outputs = self.model(**batch)
-                loss = outputs.loss
+                # Use weighted loss instead of the model's built-in unweighted loss
+                logits = outputs.logits  # (batch, seq_len, num_labels)
+                loss = loss_fn(logits.view(-1, 3), labels.view(-1))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()

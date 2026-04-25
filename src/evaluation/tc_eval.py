@@ -1,16 +1,17 @@
-from sklearn.metrics import f1_score, classification_report
+from sklearn.metrics import f1_score, precision_score, recall_score, classification_report
 
 
 def evaluate_tc(gold_labels: list, pred_labels: list, label_names: list = None) -> dict:
     """
-    Evaluate technique classification predictions using micro and macro F1,
-    the standard metrics for TC in imbalanced multi-class settings.
+    Evaluate technique classification predictions.
 
-    Micro F1: aggregates TP/FP/FN across all classes — dominated by frequent
-              classes (e.g. Loaded Language). Reflects overall accuracy.
+    Returns micro and macro averaged precision, recall, and F1.
 
-    Macro F1: averages F1 per class unweighted — treats all 14 techniques
-              equally regardless of frequency. Primary metric for TC.
+    Micro averages aggregate TP/FP/FN across all classes — dominated by
+    frequent classes (e.g. Loaded Language). Reflect overall accuracy.
+
+    Macro averages treat all 14 techniques equally regardless of frequency.
+    Macro F1 is the primary metric for TC.
 
     Args:
         gold_labels:  list of true technique label strings
@@ -18,16 +19,21 @@ def evaluate_tc(gold_labels: list, pred_labels: list, label_names: list = None) 
         label_names:  optional list of class names for the per-class report
 
     Returns:
-        dict with keys 'micro_f1', 'macro_f1', and optionally 'report'
+        dict with keys 'micro_precision', 'micro_recall', 'micro_f1',
+        'macro_precision', 'macro_recall', 'macro_f1', and optionally 'report'
     """
     assert len(gold_labels) == len(pred_labels), (
         f"Length mismatch: gold={len(gold_labels)}, pred={len(pred_labels)}"
     )
 
-    micro_f1 = f1_score(gold_labels, pred_labels, average='micro', zero_division=0)
-    macro_f1 = f1_score(gold_labels, pred_labels, average='macro', zero_division=0)
-
-    result = {'micro_f1': micro_f1, 'macro_f1': macro_f1}
+    result = {
+        'micro_precision': precision_score(gold_labels, pred_labels, average='micro', zero_division=0),
+        'micro_recall':    recall_score(   gold_labels, pred_labels, average='micro', zero_division=0),
+        'micro_f1':        f1_score(       gold_labels, pred_labels, average='micro', zero_division=0),
+        'macro_precision': precision_score(gold_labels, pred_labels, average='macro', zero_division=0),
+        'macro_recall':    recall_score(   gold_labels, pred_labels, average='macro', zero_division=0),
+        'macro_f1':        f1_score(       gold_labels, pred_labels, average='macro', zero_division=0),
+    }
 
     if label_names is not None:
         result['report'] = classification_report(
