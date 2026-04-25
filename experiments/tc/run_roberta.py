@@ -1,0 +1,47 @@
+"""
+Experiment: Fine-tuned RoBERTa TC
+------------------------------------
+Full RoBERTa encoder fine-tuned end-to-end with a linear warmup schedule.
+Dev split is used for early stopping; final evaluation is on the test split.
+
+Run from the project root:
+    python -m experiments.tc.run_roberta
+"""
+
+import os
+
+from src.data.corpus import load_corpus
+from src.data.splits import make_splits
+from src.models.tc.roberta_finetuned import FinetunedRoBERTaTC
+from src.evaluation.tc_eval import evaluate_tc
+
+DATA_DIR = os.getenv('DATA_DIR', 'data')
+
+
+def main():
+    print('=== Fine-tuned RoBERTa TC ===\n')
+
+    # Load and split data
+    articles = load_corpus('train', DATA_DIR)
+    train, dev, test = make_splits(articles, seed=42)
+    print(f'Split sizes — train: {len(train)}, dev: {len(dev)}, test: {len(test)}\n')
+
+    # Train — dev is used internally for early stopping
+    model = FinetunedRoBERTaTC()
+    print(f'Device: {model.device}')
+    print(f'Model : {FinetunedRoBERTaTC.MODEL_NAME}')
+    print(f'Epochs (max): {model.epochs}, patience: {model.patience}, lr: {model.lr}\n')
+    model.fit(train, dev)
+
+    # Evaluate on test split
+    gold   = [span.technique for a in test for span in a.tc_spans]
+    preds  = model.predict_flat(test)
+    result = evaluate_tc(gold, preds)
+
+    print('\nTest results:')
+    print(f'  Micro F1 : {result["micro_f1"]:.4f}')
+    print(f'  Macro F1 : {result["macro_f1"]:.4f}')
+
+
+if __name__ == '__main__':
+    main()
