@@ -39,8 +39,8 @@ def main():
     result = evaluate_tc(gold, preds)
 
     print('\nTest results:')
-    print(f'  Micro F1 : {result["micro_f1"]:.4f}')
-    print(f'  Macro F1 : {result["macro_f1"]:.4f}')
+    print(f'  Micro — P: {result["micro_precision"]:.4f}  R: {result["micro_recall"]:.4f}  F1: {result["micro_f1"]:.4f}')
+    print(f'  Macro — P: {result["macro_precision"]:.4f}  R: {result["macro_recall"]:.4f}  F1: {result["macro_f1"]:.4f}')
 
 
 if __name__ == '__main__':
