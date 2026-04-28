@@ -8,7 +8,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 
 
 def parse_run_arg() -> int:
@@ -133,6 +133,75 @@ def save_confusion_matrix(
     out_dir = os.path.join('results', task)
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f'{model}_cm_run{run}.png')
+    plt.savefig(out_path, dpi=150, bbox_inches='tight')
+    plt.close()
+
+    return out_path
+
+
+def save_classification_report_figure(
+    task: str,
+    model: str,
+    run: int,
+    gold: list,
+    preds: list,
+    labels: list,
+) -> str:
+    """
+    Generate a per-class classification report heatmap and save as PNG.
+
+    Shows precision, recall, and F1-score for each class as a colour-coded
+    heatmap. Classes with no predicted examples show 0.0.
+
+    Args:
+        task:   'si' or 'tc'
+        model:  model name string
+        run:    run number
+        gold:   list of true label strings
+        preds:  list of predicted label strings
+        labels: ordered list of class names
+
+    Returns:
+        Path to the saved PNG file.
+    """
+    report = classification_report(
+        gold, preds, labels=labels, output_dict=True, zero_division=0
+    )
+
+    short = [_CM_SHORT_LABELS.get(l, l) for l in labels]
+    metrics = ['precision', 'recall', 'f1-score']
+    data = np.array([[report[l][m] for m in metrics] for l in labels])
+
+    fig, ax = plt.subplots(figsize=(7, 9))
+    im = ax.imshow(data, aspect='auto', cmap='RdYlGn', vmin=0, vmax=1)
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    ax.set_xticks(range(3))
+    ax.set_xticklabels(['Precision', 'Recall', 'F1'], fontsize=11)
+    ax.set_yticks(range(len(labels)))
+    ax.set_yticklabels(short, fontsize=9)
+    ax.set_title(f'Per-class Report — {model} (run {run})', fontsize=12)
+
+    # Annotate every cell with its value
+    for i in range(len(labels)):
+        for j in range(3):
+            val = data[i, j]
+            colour = 'white' if val < 0.25 or val > 0.75 else 'black'
+            ax.text(j, i, f'{val:.2f}', ha='center', va='center',
+                    fontsize=8, color=colour)
+
+    # Add support counts on the right
+    supports = [report[l]['support'] for l in labels]
+    ax2 = ax.twinx()
+    ax2.set_ylim(ax.get_ylim())
+    ax2.set_yticks(range(len(labels)))
+    ax2.set_yticklabels([f'n={int(s)}' for s in supports], fontsize=8)
+
+    plt.tight_layout()
+
+    out_dir = os.path.join('results', task)
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f'{model}_report_run{run}.png')
     plt.savefig(out_path, dpi=150, bbox_inches='tight')
     plt.close()
 
