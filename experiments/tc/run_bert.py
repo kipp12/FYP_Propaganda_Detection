@@ -1,7 +1,7 @@
 """
-Experiment: Frozen BERT TC
-----------------------------
-BERT encoder with frozen weights; only the linear classification head is trained.
+Experiment: Frozen RoBERTa TC
+--------------------------------
+RoBERTa encoder with frozen weights; only the linear classification head is trained.
 Dev split is used for early stopping; final evaluation is on the test split.
 
 Run from the project root:
@@ -12,7 +12,7 @@ import os
 
 from src.data.corpus import load_corpus
 from src.data.splits import make_splits
-from src.models.tc.bert_frozen import FrozenBERTTC
+from src.models.tc.bert_frozen import FrozenRoBERTaTC
 from src.evaluation.tc_eval import evaluate_tc, TC_LABELS
 from experiments.utils import parse_run_arg, save_results, save_confusion_matrix, save_classification_report_figure
 
@@ -21,7 +21,7 @@ DATA_DIR = os.getenv('DATA_DIR', 'data')
 
 def main():
     run = parse_run_arg()
-    print(f'=== Frozen BERT TC (run {run}) ===\n')
+    print(f'=== Frozen RoBERTa TC (run {run}) ===\n')
 
     # Load and split data
     articles = load_corpus('train', DATA_DIR)
@@ -29,9 +29,9 @@ def main():
     print(f'Split sizes — train: {len(train)}, dev: {len(dev)}, test: {len(test)}\n')
 
     # Train — dev is used internally for early stopping
-    model = FrozenBERTTC()
+    model = FrozenRoBERTaTC()
     print(f'Device: {model.device}')
-    print(f'Model : {FrozenBERTTC.MODEL_NAME}')
+    print(f'Model : {FrozenRoBERTaTC.MODEL_NAME}')
     print(f'Epochs (max): {model.epochs}, patience: {model.patience}\n')
     model.fit(train, dev)
 

@@ -31,8 +31,8 @@ class _TCDataset(Dataset):
     """
     Each example is a propaganda span tokenised together with its
     surrounding article context. The span text is passed as the primary
-    sequence and the article text provides context via BERT's pair encoding.
-    The [CLS] embedding will be used for classification.
+    sequence and the article text provides context via RoBERTa's pair encoding.
+    The <s> embedding will be used for classification.
     """
 
     def __init__(self, articles: list, tokenizer, max_length: int, has_labels: bool = True):
@@ -78,16 +78,17 @@ def _collate(batch):
     return result
 
 
-class FrozenBERTTC:
+class FrozenRoBERTaTC:
     """
-    Frozen BERT encoder for technique classification.
+    Frozen RoBERTa encoder for technique classification.
 
-    BERT is used as a frozen feature extractor. Each propaganda span,
-    together with its surrounding article context, is tokenised and passed
-    through the frozen BERT encoder. The embedding of the [CLS] token is
-    extracted as a fixed-length 768-dimensional summary representation and
-    passed into a linear classification head predicting one of 14 technique
-    classes. Only the classification head is updated during training.
+    RoBERTa is used as a frozen feature extractor. Each propaganda span,
+    together with its surrounding article context, is tokenised using
+    RoBERTa's byte-pair encoding tokeniser and passed through the frozen
+    encoder. The embedding of the <s> token is extracted as a fixed-length
+    768-dimensional summary representation and passed into a linear
+    classification head predicting one of 14 technique classes. Only the
+    classification head is updated during training.
 
     Class-weighted cross-entropy loss is used to counter the span-level
     class imbalance across the 14 technique classes.
@@ -95,7 +96,7 @@ class FrozenBERTTC:
     Early stopping is applied based on macro F1 on the development set.
     """
 
-    MODEL_NAME = 'bert-base-uncased'
+    MODEL_NAME = 'roberta-base'
 
     def __init__(
         self,
