@@ -14,7 +14,7 @@ from src.data.corpus import load_corpus
 from src.data.splits import make_splits
 from src.models.tc.naive import NaiveTC
 from src.evaluation.tc_eval import evaluate_tc, TC_LABELS
-from experiments.utils import parse_run_arg, save_results, save_confusion_matrix, save_classification_report_figure
+from experiments.utils import parse_run_arg, save_results, save_confusion_matrix, save_classification_report_figure, save_errors
 
 DATA_DIR = os.getenv('DATA_DIR', 'data')
 
@@ -51,6 +51,9 @@ def main():
 
     report_path = save_classification_report_figure('tc', 'naive', run, gold, preds, TC_LABELS)
     print(f'Classification report → {report_path}')
+
+    errors_path = save_errors('tc', 'naive', run, test, gold, preds)
+    print(f'Errors → {errors_path}')
 
 
 if __name__ == '__main__':

@@ -53,6 +53,44 @@ def save_results(task: str, model: str, run: int, metrics: dict) -> str:
     return out_path
 
 
+def save_errors(task: str, model: str, run: int, articles: list, gold: list, preds: list) -> str:
+    """
+    Save misclassified TC spans to a JSON file for error analysis.
+
+    For every span where gold != pred, records the span text, its gold
+    technique label, and the model's predicted label. The resulting file
+    can be used to find representative examples of common confusions —
+    e.g. to illustrate an off-diagonal cell in the confusion matrix.
+
+    Args:
+        task:     'tc'
+        model:    model name string
+        run:      run number
+        articles: list of Article objects from the test split
+        gold:     flat list of true technique label strings
+        preds:    flat list of predicted technique label strings
+
+    Returns:
+        Path to the saved JSON file.
+    """
+    spans = [span for a in articles for span in a.tc_spans]
+    texts = [a.text[span.start:span.end] for a in articles for span in a.tc_spans]
+
+    errors = [
+        {'text': text, 'gold': g, 'pred': p}
+        for text, g, p in zip(texts, gold, preds)
+        if g != p
+    ]
+
+    out_dir = os.path.join('results', task)
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f'{model}_errors_run{run}.json')
+    with open(out_path, 'w') as f:
+        json.dump(errors, f, indent=2, ensure_ascii=False)
+
+    return out_path
+
+
 # Shortened labels for confusion matrix axes (full names are too long to display)
 _CM_SHORT_LABELS = {
     'Loaded_Language':                      'Loaded Lang.',
