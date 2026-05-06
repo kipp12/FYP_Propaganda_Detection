@@ -23,7 +23,7 @@ import os
 
 from src.data.corpus import load_corpus
 from src.data.splits import make_splits
-from src.models.si.roberta_finetuned import FinetunedRoBERTaSI
+from src.models.si.roberta_ft import FinetunedRoBERTaSI
 
 DATA_DIR = os.getenv('DATA_DIR', 'data')
 

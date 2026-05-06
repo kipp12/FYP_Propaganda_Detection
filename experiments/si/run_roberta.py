@@ -12,7 +12,7 @@ import os
 
 from src.data.corpus import load_corpus
 from src.data.splits import make_splits
-from src.models.si.roberta_finetuned import FinetunedRoBERTaSI
+from src.models.si.roberta_ft import FinetunedRoBERTaSI
 from src.evaluation.si_eval import evaluate_si
 from experiments.utils import parse_run_arg, save_results
 

@@ -12,7 +12,7 @@ import os
 
 from src.data.corpus import load_corpus
 from src.data.splits import make_splits
-from src.models.si.bert_frozen import FrozenRoBERTaSI
+from src.models.si.roberta_base import FrozenRoBERTaSI
 from src.evaluation.si_eval import evaluate_si
 from experiments.utils import parse_run_arg, save_results
 
