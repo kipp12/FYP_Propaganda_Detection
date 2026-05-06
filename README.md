@@ -55,15 +55,11 @@ results/                — Output JSONs and figures (generated at runtime)
 
 ## Data
 
-This project uses the PTC corpus from SemEval 2020 Task 11. The data is **not included** in this repository as it is subject to the competition's terms of use.
+This project uses the PTC corpus from SemEval 2020 Task 11, included in the `data/` directory:
 
-To obtain the data:
-1. Register at https://propaganda.math.unipd.it/semeval2020task11/
-2. Download the training set
-3. Place the contents in the `data/` directory so it contains:
-   - `data/train-articles/`
-   - `data/train-labels-task1-span-identification/`
-   - `data/train-labels-task2-technique-classification/`
+- `data/train-articles/` — 371 labelled news articles
+- `data/train-labels-task1-span-identification/` — gold SI span annotations
+- `data/train-labels-task2-technique-classification/` — gold TC technique annotations
 
 ## Setup
 
