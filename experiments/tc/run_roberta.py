@@ -5,7 +5,7 @@ Full RoBERTa encoder fine-tuned end-to-end with a linear warmup schedule.
 Dev split is used for early stopping; final evaluation is on the test split.
 
 Run from the project root:
-    python -m experiments.tc.run_roberta
+    python -m experiments.tc.run_roberta [--run N]
 """
 
 import os
@@ -13,13 +13,15 @@ import os
 from src.data.corpus import load_corpus
 from src.data.splits import make_splits
 from src.models.tc.roberta_finetuned import FinetunedRoBERTaTC
-from src.evaluation.tc_eval import evaluate_tc
+from src.evaluation.tc_eval import evaluate_tc, TC_LABELS
+from experiments.utils import parse_run_arg, save_results, save_confusion_matrix, save_classification_report_figure, save_errors
 
 DATA_DIR = os.getenv('DATA_DIR', 'data')
 
 
 def main():
-    print('=== Fine-tuned RoBERTa TC ===\n')
+    run = parse_run_arg()
+    print(f'=== Fine-tuned RoBERTa TC (run {run}) ===\n')
 
     # Load and split data
     articles = load_corpus('train', DATA_DIR)
@@ -41,6 +43,18 @@ def main():
     print('\nTest results:')
     print(f'  Micro — P: {result["micro_precision"]:.4f}  R: {result["micro_recall"]:.4f}  F1: {result["micro_f1"]:.4f}')
     print(f'  Macro — P: {result["macro_precision"]:.4f}  R: {result["macro_recall"]:.4f}  F1: {result["macro_f1"]:.4f}')
+
+    path = save_results('tc', 'roberta_finetuned', run, result)
+    print(f'\nSaved → {path}')
+
+    cm_path = save_confusion_matrix('tc', 'roberta_finetuned', run, gold, preds, TC_LABELS)
+    print(f'Confusion matrix → {cm_path}')
+
+    report_path = save_classification_report_figure('tc', 'roberta_finetuned', run, gold, preds, TC_LABELS)
+    print(f'Classification report → {report_path}')
+
+    errors_path = save_errors('tc', 'roberta_finetuned', run, test, gold, preds)
+    print(f'Errors → {errors_path}')
 
 
 if __name__ == '__main__':

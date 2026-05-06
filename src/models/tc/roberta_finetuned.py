@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import (
     AutoTokenizer,
@@ -8,6 +9,21 @@ from transformers import (
 from torch.nn.utils.rnn import pad_sequence
 
 from src.evaluation.tc_eval import evaluate_tc, TC_LABELS
+
+
+def _compute_class_weights(dataset) -> torch.Tensor:
+    """
+    Compute per-class weights inversely proportional to span frequency.
+
+    Returns a weight tensor of length 14 suitable for
+    torch.nn.CrossEntropyLoss(weight=...).
+    """
+    counts = [0] * len(TC_LABELS)
+    for label in dataset.labels:
+        counts[label] += 1
+    total = sum(counts)
+    weights = [total / (len(TC_LABELS) * max(c, 1)) for c in counts]
+    return torch.tensor(weights, dtype=torch.float)
 
 
 # Map technique strings to integer indices and back
@@ -130,6 +146,11 @@ class FinetunedRoBERTaTC:
             train_dataset, batch_size=self.batch_size, shuffle=True, collate_fn=_collate
         )
 
+        # Weighted loss to address span-level class imbalance across 14 techniques
+        class_weights = _compute_class_weights(train_dataset).to(self.device)
+        loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+        print(f'Class weights (min: {class_weights.min():.3f}, max: {class_weights.max():.3f})')
+
         total_steps  = len(train_loader) * self.epochs
         warmup_steps = int(total_steps * self.warmup_ratio)
 
@@ -150,8 +171,9 @@ class FinetunedRoBERTaTC:
 
             for batch in train_loader:
                 batch = {k: v.to(self.device) for k, v in batch.items()}
+                labels = batch.pop('labels')
                 outputs = self.model(**batch)
-                loss = outputs.loss
+                loss = loss_fn(outputs.logits, labels)
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)

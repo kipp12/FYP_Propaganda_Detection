@@ -60,17 +60,17 @@ class _SIDataset(Dataset):
         return self.examples[idx]
 
 
-class FrozenBERTSI:
+class FrozenRoBERTaSI:
     """
-    Frozen BERT encoder for span identification.
+    Frozen RoBERTa encoder for span identification.
 
-    BERT is used purely as a feature extractor. The encoder weights are
+    RoBERTa is used purely as a feature extractor. The encoder weights are
     frozen throughout training and only the linear classification head is
-    updated. Each article is tokenised using BERT's WordPiece tokeniser,
-    gold character-level span annotations are mapped to token-level BIO
-    tags via bio.py, and the full token sequence is passed through the
-    frozen encoder. The resulting contextual embeddings are fed into a
-    linear head that predicts a BIO tag per token.
+    updated. Each article is tokenised using RoBERTa's byte-pair encoding
+    tokeniser, gold character-level span annotations are mapped to
+    token-level BIO tags via bio.py, and the full token sequence is passed
+    through the frozen encoder. The resulting contextual embeddings are fed
+    into a linear head that predicts a BIO tag per token.
 
     Class-weighted cross-entropy loss is used to counter the severe
     token-level imbalance between O (non-propaganda) and B/I tokens.
@@ -81,7 +81,7 @@ class FrozenBERTSI:
     evaluation against the gold standard.
     """
 
-    MODEL_NAME = 'bert-base-uncased'
+    MODEL_NAME = 'roberta-base'
 
     def __init__(
         self,

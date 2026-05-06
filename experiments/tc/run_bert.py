@@ -1,25 +1,27 @@
 """
-Experiment: Frozen BERT TC
-----------------------------
-BERT encoder with frozen weights; only the linear classification head is trained.
+Experiment: Frozen RoBERTa TC
+--------------------------------
+RoBERTa encoder with frozen weights; only the linear classification head is trained.
 Dev split is used for early stopping; final evaluation is on the test split.
 
 Run from the project root:
-    python -m experiments.tc.run_bert
+    python -m experiments.tc.run_bert [--run N]
 """
 
 import os
 
 from src.data.corpus import load_corpus
 from src.data.splits import make_splits
-from src.models.tc.bert_frozen import FrozenBERTTC
-from src.evaluation.tc_eval import evaluate_tc
+from src.models.tc.bert_frozen import FrozenRoBERTaTC
+from src.evaluation.tc_eval import evaluate_tc, TC_LABELS
+from experiments.utils import parse_run_arg, save_results, save_confusion_matrix, save_classification_report_figure, save_errors
 
 DATA_DIR = os.getenv('DATA_DIR', 'data')
 
 
 def main():
-    print('=== Frozen BERT TC ===\n')
+    run = parse_run_arg()
+    print(f'=== Frozen RoBERTa TC (run {run}) ===\n')
 
     # Load and split data
     articles = load_corpus('train', DATA_DIR)
@@ -27,9 +29,9 @@ def main():
     print(f'Split sizes — train: {len(train)}, dev: {len(dev)}, test: {len(test)}\n')
 
     # Train — dev is used internally for early stopping
-    model = FrozenBERTTC()
+    model = FrozenRoBERTaTC()
     print(f'Device: {model.device}')
-    print(f'Model : {FrozenBERTTC.MODEL_NAME}')
+    print(f'Model : {FrozenRoBERTaTC.MODEL_NAME}')
     print(f'Epochs (max): {model.epochs}, patience: {model.patience}\n')
     model.fit(train, dev)
 
@@ -41,6 +43,18 @@ def main():
     print('\nTest results:')
     print(f'  Micro — P: {result["micro_precision"]:.4f}  R: {result["micro_recall"]:.4f}  F1: {result["micro_f1"]:.4f}')
     print(f'  Macro — P: {result["macro_precision"]:.4f}  R: {result["macro_recall"]:.4f}  F1: {result["macro_f1"]:.4f}')
+
+    path = save_results('tc', 'bert_frozen', run, result)
+    print(f'\nSaved → {path}')
+
+    cm_path = save_confusion_matrix('tc', 'bert_frozen', run, gold, preds, TC_LABELS)
+    print(f'Confusion matrix → {cm_path}')
+
+    report_path = save_classification_report_figure('tc', 'bert_frozen', run, gold, preds, TC_LABELS)
+    print(f'Classification report → {report_path}')
+
+    errors_path = save_errors('tc', 'bert_frozen', run, test, gold, preds)
+    print(f'Errors → {errors_path}')
 
 
 if __name__ == '__main__':
